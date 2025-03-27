@@ -9,6 +9,10 @@ mod storage;
 #[command(name = "sebas")]
 #[command(about = "Simply Elegant Bookmarking And Storing Commands")]
 struct Cli {
+    /// Optional custom storage location
+    #[arg(short, long, global = true)]
+    location: Option<PathBuf>,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -32,10 +36,6 @@ enum Commands {
         /// Optional aliases (comma-separated)
         #[arg(short, long)]
         aliases: Option<String>,
-
-        /// Optional custom storage location
-        #[arg(short, long)]
-        location: Option<PathBuf>,
     },
 
     /// Remove a command
@@ -49,12 +49,6 @@ enum Commands {
     #[command(alias = "l")]
     List,
 
-    /// Search for commands
-    #[command(alias = "s")]
-    Search {
-        /// Search term
-        query: String,
-    },
 
     /// Edit an existing command
     #[command(alias = "e")]
@@ -79,31 +73,27 @@ fn main() -> Result<()> {
             command, 
             group, 
             comment, 
-            aliases, 
-            location 
+            aliases,
         }) => {
             commands::add_command(
                 command.clone(), 
                 group.clone(), 
                 comment.clone(), 
                 aliases.clone(), 
-                location.clone()
+                cli.location.clone()
             )
         },
         Some(Commands::Remove { identifier }) => {
-            commands::remove_command(identifier)
+            commands::remove_command(identifier, cli.location.clone())
         },
         Some(Commands::List) => {
-            commands::list_commands()
-        },
-        Some(Commands::Search { query }) => {
-            commands::search_commands(query)
+            commands::list_commands(cli.location.clone())
         },
         Some(Commands::Edit { command }) => {
-            commands::edit_command(command)
+            commands::edit_command(command, cli.location.clone())
         },
         Some(Commands::Get { query }) => {
-            commands::run_command(query)
+            commands::run_command(query, cli.location.clone())
         },
         None => {
             println!("No command specified. Use --help to see available commands.");
