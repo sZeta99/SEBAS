@@ -14,3 +14,5 @@ serde_yaml = "0.9"
 uuid = { version = "1.6", features = ["v4"] }
 home = "0.5"
 colored = "2.1.0"
+rustyline = "12.0.0"
+termion = "4.0"

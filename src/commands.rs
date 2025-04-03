@@ -4,6 +4,12 @@ use std::fs;
 use serde::{Serialize, Deserialize};
 use std::env;
 use colored::*;
+use termion::raw::IntoRawMode;
+use termion::input::TermRead;
+use termion::event::Key;
+use termion::screen::{AlternateScreen, IntoAlternateScreen};
+use std::io::{self, stdout, Write};
+use std::process::Command;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CommandEntry {
@@ -121,68 +127,207 @@ pub fn remove_command(identifier: &str, location: Option<PathBuf>) -> Result<()>
     Err(anyhow!("No command found matching: {}", identifier))
 }
 
-pub fn list_commands(location: Option<PathBuf>) -> Result<()> {
+// New function to load all commands
+fn load_all_commands(location: Option<PathBuf>) -> Result<Vec<(String, Vec<CommandEntry>)>> {
     let storage_path = get_storage_path(location);
+    let mut all_groups = Vec::new();
 
-    // Check if any commands exist
-    let entries: Vec<_> = fs::read_dir(&storage_path)?
-        .filter_map(|entry| entry.ok())
-        .filter(|entry| entry.path().extension().and_then(|s| s.to_str()) == Some("yaml"))
-        .collect();
+    // Check if directory exists
+    if !storage_path.exists() {
+        return Ok(Vec::new());
+    }
 
-    if entries.is_empty() {
+    // Read all yaml files
+    for entry in fs::read_dir(&storage_path)? {
+        let entry = entry?;
+        let path = entry.path();
+        
+        // Only process YAML files
+        if path.extension().and_then(|s| s.to_str()) == Some("yaml") {
+            let content = fs::read_to_string(&path)?;
+            let group_entry: GroupEntry = serde_yaml::from_str(&content)?;
+            
+            // Sort commands within the group
+            let mut sorted_commands = group_entry.commands;
+            sorted_commands.sort_by(|a, b| a.command.cmp(&b.command));
+            
+            all_groups.push((group_entry.group, sorted_commands));
+        }
+    }
+
+    // Sort groups
+    all_groups.sort_by(|(name_a, _), (name_b, _)| name_a.cmp(name_b));
+    
+    Ok(all_groups)
+}
+
+pub fn list_commands(location: Option<PathBuf>) -> Result<()> {
+    let all_groups = load_all_commands(location.clone())?;
+
+    if all_groups.is_empty() {
         println!("{}", "No commands stored yet.".yellow());
         return Ok(());
     }
 
-    // Print header
-    println!("{}", "Stored Commands:".bold().blue());
-    println!("{}", "===============".blue());
+    // Create a vector of display strings and corresponding commands
+    let mut display_items = Vec::new();
+    let mut command_map = Vec::new();
 
-    let mut total_commands = 0;
-
-    // Sort group files
-    let mut sorted_entries = entries;
-    sorted_entries.sort_by_key(|entry| entry.file_name());
-
-    // Iterate through sorted group files
-    for entry in sorted_entries {
-        let path = entry.path();
-        let content = fs::read_to_string(&path)?;
-        let group_entry: GroupEntry = serde_yaml::from_str(&content)?;
+    // Build the display list and command mapping
+    for (group_name, commands) in &all_groups {
+        display_items.push(format!("{}: ", group_name.bold().green()));
+        command_map.push(None); // Group header has no command
         
-        // Print group header
-        println!("\n{}: ", group_entry.group.bold().green());
-        
-        // Sort commands within the group
-        let mut sorted_commands = group_entry.commands;
-        sorted_commands.sort_by(|a, b| a.command.cmp(&b.command));
-
-        // Print each command in the group
-        for (index, command) in sorted_commands.iter().enumerate() {
-            // Command with index
-            print!("{:2}. {}", index + 1, command.command.cyan());
+        for (index, command) in commands.iter().enumerate() {
+            let mut display = format!("{:2}. {}", index + 1, command.command.cyan());
             
             // Aliases (if any)
             if let Some(aliases) = &command.aliases {
-                print!(" {}", format!("[{}]", aliases.join(", ")).dimmed());
+                display.push_str(&format!(" {}", format!("[{}]", aliases.join(", ")).dimmed()));
             }
             
             // Comment (if any)
             if let Some(comment) = &command.comment {
-                print!(" - {}", comment.italic().dimmed());
+                display.push_str(&format!(" - {}", comment.italic().dimmed()));
             }
             
-            println!(); // New line
+            display_items.push(display);
+            command_map.push(Some(command.clone()));
         }
-
-        total_commands += sorted_commands.len();
     }
 
-    // Footer with total commands
-    println!("\n{} Total Commands", total_commands.to_string().bold().blue());
+    let total_commands = command_map.iter().filter(|cmd| cmd.is_some()).count();
+
+    // Setup terminal
+     let mut screen = stdout()
+        .into_raw_mode()
+        .unwrap()
+        .into_alternate_screen()
+        .unwrap();
+
+    let stdin = io::stdin();
+    let mut keys = stdin.keys();
+    
+    let mut selected_index = 1; // Start with the first actual command
+    
+    // Find the first actual command if we're not already on one
+    while selected_index < command_map.len() && command_map[selected_index].is_none() {
+        selected_index += 1;
+    }
+
+    // Main interaction loop
+    loop {
+        // Clear screen and reset cursor
+        writeln!(screen, "{}{}", termion::clear::All, termion::cursor::Goto(1, 1))?;
+        writeln!(screen, "\r{}\r{}", "Stored Commands:".bold().blue(),"===============".blue())?;
+        
+        // Display items with highlighting for the selected one
+        for (i, item) in display_items.iter().enumerate() {
+            if i == selected_index {
+                writeln!(screen, "{} <<<", item.bold().on_blue())?;
+            } else {
+                writeln!(screen, "{}", item)?;
+            }
+        }
+        
+        // Instructions at the bottom
+        write!(screen, "\r{}{}\r{}", total_commands.to_string().bold().blue(), " Total Command." ,"Use ↑/↓ keys to navigate, Enter to execute, q to quit".yellow())?;
+        screen.flush()?;
+        
+        // Get user key input
+        if let Some(Ok(key)) = keys.next() {
+            match key {
+                Key::Char('q') | Key::Ctrl('c') => {
+                    break;
+                },
+                Key::Char('\n') => {
+                    // Execute selected command if it exists
+                    if let Some(cmd_entry) = &command_map[selected_index] {
+                        // Return to normal terminal mode temporarily
+                        drop(screen);
+                        //drop(stdout);
+                        
+                        println!("\nExecuting: {}", cmd_entry.command.green());
+                        
+                        // Execute the command
+                        match execute_command(&cmd_entry.command) {
+                            Ok(_) => println!("Command executed successfully."),
+                            Err(e) => println!("Error executing command: {}", e),
+                        }
+                        
+                        println!("Press Enter to continue...");
+                        let mut input = String::new();
+                        io::stdin().read_line(&mut input)?;
+                        
+                        // Return to raw mode
+                         screen = stdout()
+                                .into_raw_mode()
+                                .unwrap()
+                                .into_alternate_screen()
+                                .unwrap();
+
+                    }
+                },
+                Key::Down | Key::Char('j') => {
+                    // Move down
+                    selected_index = find_next_command(selected_index, &command_map, true);
+                },
+                Key::Up | Key::Char('k') => {
+                    // Move up
+                    selected_index = find_next_command(selected_index, &command_map, false);
+                },
+                _ => {}
+            }
+        }
+    }
 
     Ok(())
+}
+
+// Helper function to find the next or previous command
+fn find_next_command(current: usize, command_map: &[Option<CommandEntry>], forward: bool) -> usize {
+    let len = command_map.len();
+    
+    if forward {
+        // Find next command
+        for i in 1..len {
+            let idx = (current + i) % len;
+            if command_map[idx].is_some() {
+                return idx;
+            }
+        }
+    } else {
+        // Find previous command
+        for i in 1..len {
+            let idx = (current + len - i) % len;
+            if command_map[idx].is_some() {
+                return idx;
+            }
+        }
+    }
+    
+    current // Return current if no other command found
+}
+
+// Execute a command using the shell
+fn execute_command(cmd: &str) -> Result<()> {
+    #[cfg(target_family = "unix")]
+    let output = Command::new("sh")
+        .arg("-c")
+        .arg(cmd)
+        .status()?;
+
+    #[cfg(target_family = "windows")]
+    let output = Command::new("cmd")
+        .arg("/C")
+        .arg(cmd)
+        .status()?;
+
+    if output.success() {
+        Ok(())
+    } else {
+        Err(anyhow!("Command exited with non-zero status: {:?}", output))
+    }
 }
 
 pub fn retrieve_command(query: &str, location: Option<PathBuf>) -> Result<String> {
@@ -212,9 +357,6 @@ pub fn retrieve_command(query: &str, location: Option<PathBuf>) -> Result<String
     Err(anyhow!("No command found matching: {}", query))
 }
 
-
-
-
 pub fn edit_command(command: &str, location: Option<PathBuf>) -> Result<()> {
     // TODO: Implement more robust edit functionality
     // For now, just find and print the command
@@ -225,6 +367,7 @@ pub fn edit_command(command: &str, location: Option<PathBuf>) -> Result<()> {
     // or prompt for new command details
     Ok(())
 }
+
 pub fn run_command(query: &str, location: Option<PathBuf>) -> Result<()> {
     let command = retrieve_command(query, location)?;
     
