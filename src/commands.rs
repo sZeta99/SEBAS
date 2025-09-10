@@ -218,8 +218,8 @@ pub fn list_commands(location: Option<PathBuf>) -> Result<()> {
     // Main interaction loop
     loop {
         // Clear screen and reset cursor
-        writeln!(screen, "{}{}", termion::clear::All, termion::cursor::Goto(1, 1))?;
-        writeln!(screen, "\r{}\r{}", "Stored Commands:".bold().blue(),"===============".blue())?;
+        write!(screen, "{}{}", termion::clear::All, termion::cursor::Goto(1, 1))?;
+        writeln!(screen, "{}\r{}", "Stored Commands:".bold().blue(),"===============".blue())?;
         
         // Display items with highlighting for the selected one
         for (i, item) in display_items.iter().enumerate() {
@@ -231,13 +231,13 @@ pub fn list_commands(location: Option<PathBuf>) -> Result<()> {
         }
         
         // Instructions at the bottom
-        write!(screen, "\r{}{}\r{}", total_commands.to_string().bold().blue(), " Total Command." ,"Use ↑/↓ keys to navigate, Enter to execute, q to quit".yellow())?;
+        writeln!(screen, "{}{}\r{}", total_commands.to_string().bold().blue(), " Total Command." ,"Use ↑/↓ keys to navigate, Enter to execute, q to quit".yellow())?;
         screen.flush()?;
         
         // Get user key input
         if let Some(Ok(key)) = keys.next() {
             match key {
-                Key::Char('q') | Key::Ctrl('c') => {
+                Key::Char('q') | Key::Ctrl('c') | Key::Esc => {
                     break;
                 },
                 Key::Char('\n') => {
@@ -260,13 +260,14 @@ pub fn list_commands(location: Option<PathBuf>) -> Result<()> {
                         io::stdin().read_line(&mut input)?;
                         
                         // Return to raw mode
-                         screen = stdout()
-                                .into_raw_mode()
-                                .unwrap()
-                                .into_alternate_screen()
-                                .unwrap();
-
+                        //screen = stdout()
+                        //       .into_raw_mode()
+                        //       .unwrap()
+                        //       .into_alternate_screen()
+                        //      .unwrap();
+                        
                     }
+                    break;
                 },
                 Key::Down | Key::Char('j') => {
                     // Move down

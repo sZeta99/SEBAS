@@ -3,3 +3,6 @@ commands:
 - command: Commnad
   comment: null
   aliases: null
+- command: comando
+  comment: null
+  aliases: null

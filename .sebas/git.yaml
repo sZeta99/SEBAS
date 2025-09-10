@@ -1,6 +1,0 @@
-group: git
-commands:
-- command: ' git status '
-  comment: commentino
-  aliases:
-  - gs
