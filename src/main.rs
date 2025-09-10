@@ -4,6 +4,14 @@ use std::path::PathBuf;
 
 mod commands;
 mod storage;
+//NOTE 
+//writecmd () { 
+//  perl -e 'ioctl STDOUT, 0x5412, $_ for split //, do{ chomp($_ = <>); $_ }' ; 
+//}
+
+//# Example usage
+//echo 'my test cmd' | writecmd
+
 
 #[derive(Parser)]
 #[command(name = "sebas")]

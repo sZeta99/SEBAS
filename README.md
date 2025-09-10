@@ -73,3 +73,33 @@ An optional GUI could be built using a library like `egui` or `iced`. The GUI wo
 - **Search**: Include a search bar to filter commands.
 - **Sync**: Add a button to sync nested `.sebas` folders.
 
+ Simple Indexing or Dynamic Resolution Options Choose between simple indices or hash-based identifiers:
+
+Option 1: Dynamic, Context-Aware Indexes
+
+    Assign numbers dynamically when a list is displayed. The numbers refer only to the current session of resolved commands.
+        Easy to maintain and user-friendly.
+        Indexes reset every time sebas ls is run.
+        Example:
+
+$ sebas ls
+[1] docker build -t my-app . (./.sebas)
+[2] git commit -m 'Initial commit' (~/project/.sebas)
+
+After listing, users can edit/remove based on the transient index:
+
+        $ sebas e 1 --new-command "docker build -t my-new-app ."
+
+Option 2: Hash-Based Unique Identifiers
+
+    Generate a unique hash (e.g., a short SHA256, UUID, or custom format based on the command text).
+    Commands are always referred to by their hash, making them portable and consistent across CLI sessions.
+        Example:
+
+$ sebas ls
+[a1f1] docker build -t my-app . (./.sebas)
+[cff3] git commit -m 'Initial commit' (Root/.sebas)
+
+Users then pass the hash when editing or removing commands:
+
+$ sebas e a1f1 --new-command "docker build -t my-new-app ."
