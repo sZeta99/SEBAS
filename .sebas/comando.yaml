@@ -1,5 +1,0 @@
-group: comando
-commands:
-- command: ls
-  comment: null
-  aliases: null
