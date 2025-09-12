@@ -1,3 +1,4 @@
+use anyhow::{Context, Error};
 use colored::Colorize;
 use termion::{event::Key, input::TermRead};
 use termion::raw::IntoRawMode;
@@ -5,33 +6,19 @@ use termion::screen::IntoAlternateScreen;
 use crossterm::event;
 use std::io::{self, stdout, Write};
 
-pub fn sebas_fzf_run() -> Result<(), String> {
-    // Step 1: Run `sebas ls --plain` to get the list of commands
-    let sebas_output = std::process::Command::new("sebas")
-        .arg("ls")
-        .arg("--plain")
-        .output()
-        .map_err(|e| format!("Failed to run 'sebas ls --plain': {}", e))?;
+use crate::commands::core::definition::ResolvedCommand;
 
-    if !sebas_output.status.success() {
-        return Err(format!(
-            "Command 'sebas ls --plain' failed with: {}",
-            String::from_utf8_lossy(&sebas_output.stderr)
-        ));
-    }
+pub fn sebas_fzf_run(commands: Vec<ResolvedCommand>) -> Result<(),Error> {
 
-    let commands = String::from_utf8(sebas_output.stdout)
-        .map_err(|e| format!("Failed to parse 'sebas ls --plain' output: {}", e))?;
-
-    let total_commands: Vec<String> = commands.lines().map(|s| s.to_string()).collect();
+    
  // Create a vector of display strings and corresponding commands
     let mut display_items = Vec::new();
     let mut command_map = Vec::new();
     let mut index = 0;
     // Build the display list and command mapping
-    for command in &total_commands {
+    for command in &commands {
         index += 1;
-        let mut display = format!("{:2}. {}", index + 1, command);   
+        let display = format!("{:2}. {}", index + 1, command.command.command);   
         display_items.push(display);
         command_map.push(Some(command.clone()));
     }
@@ -69,7 +56,7 @@ pub fn sebas_fzf_run() -> Result<(), String> {
         }
         
         // Instructions at the bottom
-        writeln!(screen, "{}{}\r{}", total_commands.to_string().bold().blue(), " Total Command." ,"Use ↑/↓ keys to navigate, Enter to execute, q to quit".yellow())?;
+        writeln!(screen, "{}{}\r{}", commands.len().to_string().bold().blue(), " Total Command." ,"Use ↑/↓ keys to navigate, Enter to execute, q to quit".yellow()).context("Failed to Render")?;
         screen.flush()?;
         
         // Get user key input
@@ -85,13 +72,13 @@ pub fn sebas_fzf_run() -> Result<(), String> {
                         drop(screen);
                         //drop(stdout);
                         
-                        println!("\nExecuting: {}", cmd_entry.command.green());
+                        println!("\nExecuting: {}", cmd_entry.command.command.green());
                         
                         // Execute the command
-                        match execute_command(&cmd_entry.command) {
-                            Ok(_) => println!("Command executed successfully."),
-                            Err(e) => println!("Error executing command: {}", e),
-                        }
+                        //match execute_command(&cmd_entry.command) {
+                        //    Ok(_) => println!("Command executed successfully."),
+                        //    Err(e) => println!("Error executing command: {}", e),
+                        //}
                         
                         println!("Press Enter to continue...");
                         let mut input = String::new();
@@ -121,6 +108,30 @@ pub fn sebas_fzf_run() -> Result<(), String> {
     }
 
     Ok(())
+}
+// Helper function to find the next or previous command
+fn find_next_command(current: usize, command_map: &[Option<ResolvedCommand>], forward: bool) -> usize {
+    let len = command_map.len();
+    
+    if forward {
+        // Find next command
+        for i in 1..len {
+            let idx = (current + i) % len;
+            if command_map[idx].is_some() {
+                return idx;
+            }
+        }
+    } else {
+        // Find previous command
+        for i in 1..len {
+            let idx = (current + len - i) % len;
+            if command_map[idx].is_some() {
+                return idx;
+            }
+        }
+    }
+    
+    current // Return current if no other command found
 }
 
 

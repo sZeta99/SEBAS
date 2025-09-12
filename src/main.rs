@@ -1,47 +1,3 @@
-
-//NOTE 
-//writecmd () { 
-//  perl -e 'ioctl STDOUT, 0x5412, $_ for split //, do{ chomp($_ = <>); $_ }' ; 
-//}
-
-//# Example usage
-//echo 'my test cmd' | writecmd
-
-/*
-*
-*_sebas_fzf_run() {
-
-  # sebas ls --plain prints each saved command on its own line,
-
-  # optionally prefixed by "[1]" or "c1f2". Adjust to your actual output.
-
-  local cmd
-
-  cmd=$(sebas ls --plain | fzf --height 40% --border \
-
-        --prompt="SEBAS› " \
-
-        --preview 'echo {}' \
-
-        --bind 'enter:accept')
-
-  if [[ -n "$cmd" ]]; then
-
-    # If `ls` prepends an index, strip it; e.g. "[1] git status" → "git status"
-
-    cmd=${cmd#*\] }  
-
-    eval "$cmd"
-
-  fi
-
-}
-
-# Create a short alias for it:
-
-alias sr='_sebas_fzf_run'
-*
-* */
 mod utils;
 mod commands;
 use clap::{Parser};
@@ -49,7 +5,7 @@ use std::
     path::PathBuf
 ;
 
-use crate::{commands::{commands::definition::Commands, group::definition::GroupAction}, utils::fzf::sebas_fzf_run};
+use crate::{commands::{commands::definition::Commands, group::definition::GroupAction}, utils::fzf::sebas_fzf_run, };
 
 #[derive(Parser)]
 #[command(name = "sebas")]
@@ -75,10 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Sync => {
             SebasApp::sync_folders()?;
         }
-        Commands::Completions { shell } => {
-            println!("Shell completions for {} not yet implemented", shell);
-            println!("This would generate completion scripts for your shell");
-        }
+
         _ => {
             let app = SebasApp::new()?;
             
@@ -97,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Commands::Search { query } => {
                     //app.search_commands(&query)?;
-                    let _ = sebas_fzf_run();
+                    let _ = sebas_fzf_run(app.resolve_all_commands());
                 }
                 Commands::Get { identifier } => {
                     app.get_command(&identifier)?;
