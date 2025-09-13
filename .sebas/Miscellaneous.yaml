@@ -1,9 +1,25 @@
 commands:
 - command: git add
-  comment: null
+  comment: descrizione del comando
   hash: 379bc125
   created_at: 2025-09-11T13:26:19.796246576+00:00
 - command: comando
-  comment: null
+  comment: cose bellisime da dire
   hash: 20851a3c
   created_at: 2025-09-11T16:23:13.997095869+00:00
+- command: git status
+  comment: null
+  hash: e62b04aa
+  created_at: 2025-09-13T11:39:19.886943216+00:00
+- command: ls
+  comment: null
+  hash: c7b68ac3
+  created_at: 2025-09-13T11:43:01.178592997+00:00
+- command: cowsay "Hello, World!"
+  comment: null
+  hash: 5dc93271
+  created_at: 2025-09-13T11:47:23.741698523+00:00
+- command: ping 127.0.0.1
+  comment: null
+  hash: '85665870'
+  created_at: 2025-09-13T11:48:41.301739957+00:00
