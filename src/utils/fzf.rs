@@ -1,11 +1,9 @@
 use anyhow::{anyhow, Context, Error};
-use colored::Colorize;
 use std::io::Write;
 use std::process::{Command as CliCommand, Stdio};
 use crate::commands::core::definition::ResolvedCommand;
-use crate::utils::preseed::preseed;
 
-pub fn sebas_fzf_run(commands: Vec<ResolvedCommand>) -> Result<(), Error> {
+pub fn sebas_fzf_run(commands: Vec<ResolvedCommand>) -> Result<ResolvedCommand, Error> {
     // Create a vector of display strings for fzf
     let mut display_items = Vec::new();
     // Create a vector to store comments and paths for preview
@@ -104,16 +102,7 @@ pub fn sebas_fzf_run(commands: Vec<ResolvedCommand>) -> Result<(), Error> {
         .find(|cmd| cmd.command.command == selected_command)
         .ok_or_else(|| anyhow!("Selected command not found in original list"))?;
 
-    // Show additional context if available
-    if let Some(comment) = &resolved_command.command.comment {
-        println!("{} {}", "Comment:".bright_blue(), comment.dimmed());
-    }
-    let sanitized_path = resolved_command.folder_path.to_str().unwrap_or_default().replace(".sebas", "");
-    println!("{} {}", "Path:".bright_yellow(), sanitized_path.dimmed());
-    println!(); // Empty line before execution
-
     // Step 6: Execute only the actual command (not the display string)
-    let _ = preseed(&selected_command);
+    Ok(resolved_command.to_owned())
 
-    Ok(())
 }

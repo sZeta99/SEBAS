@@ -61,20 +61,20 @@ pub enum Commands {
         #[arg(short, long)]
         yes: bool,
     },
-    /// Search commands by keyword
-    #[command(alias = "s")]
-    Search {
+    /// Search commands by history
+    #[command(alias = "h")]
+    History {
         /// Search query
-        query: String,
+        query: Option<String>,
     },
-    /// Run a saved command
-    #[command(alias = "g")]
-    Get {
+    /// Obtain command
+    #[command(alias = "o")]
+    Obtain {
         /// Command index or hash
-        identifier: String,
+        identifier: Option<String>,
     },
     /// Group management
-    #[command(alias = "gr")]
+    #[command(alias = "g")]
     Group {
         #[command(subcommand)]
         action: GroupAction,
@@ -86,11 +86,7 @@ pub enum Commands {
     },
     /// Sync commands from nested .sebas folders
     Sync,
-    /// Generate shell completions
-    Completions {
-        /// Shell type (bash, zsh, fish, powershell)
-        shell: String,
-    },
+
 }
 
 

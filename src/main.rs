@@ -5,7 +5,7 @@ use std::
     path::PathBuf
 ;
 
-use crate::{commands::{commands::definition::Commands, group::definition::GroupAction}, utils::fzf::sebas_fzf_run, };
+use crate::{commands::{commands::definition::Commands, group::definition::GroupAction}};
 
 #[derive(Parser)]
 #[command(name = "sebas")]
@@ -41,19 +41,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Commands::List { group, verbose, plain } => {
                     app.list_commands(group, verbose, plain)?;
-                }
-                Commands::Edit { identifier, new_command, new_group, new_comment, yes } => {
-                    app.edit_command(&identifier, new_command, new_group, new_comment, yes)?;
+                } Commands::Edit { identifier, new_command, new_group, new_comment, yes } => { app.edit_command(&identifier, new_command, new_group, new_comment, yes)?;
                 }
                 Commands::Remove { identifier, yes } => {
                     app.remove_command(&identifier, yes)?;
                 }
-                Commands::Search { query } => {
-                    //app.search_commands(&query)?;
-                    let _ = sebas_fzf_run(app.resolve_all_commands());
+                Commands::History { query } => {
+                    app.history_commands(query)?;
                 }
-                Commands::Get { identifier } => {
-                    app.get_command(&identifier)?;
+                Commands::Obtain { identifier } => {
+                    app.obtain_command(identifier)?;
                 }
                 Commands::Group { action } => {
                     match action {

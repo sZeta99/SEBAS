@@ -1,4 +1,6 @@
-use crate::{ commands::core::definition::SavedCommand, utils::preseed::preseed, SebasApp};
+use anyhow::Context;
+
+use crate::{ commands::core::definition::SavedCommand, utils::{fzf::sebas_fzf_run, preseed::preseed}, SebasApp};
 use std::process::Command as ProcessCommand;
 
 impl SebasApp {
@@ -146,44 +148,19 @@ impl SebasApp {
         Ok(())
     }
 
-    pub fn search_commands(&self, query: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let resolved = self.resolve_all_commands();
-        let query_lower = query.to_lowercase();
-        let mut found = false;
-
-        for cmd in resolved {
-            let command_lower = cmd.command.command.to_lowercase();
-            let comment_matches = cmd.command.comment
-                .as_ref()
-                .map(|c| c.to_lowercase().contains(&query_lower))
-                .unwrap_or(false);
-            
-            if command_lower.contains(&query_lower) || comment_matches {
-                println!("[{}] {} ({}) - ID: {}", 
-                    cmd.index,
-                    cmd.command.command,
-                    cmd.group,
-                    cmd.command.hash
-                );
-                if let Some(ref comment) = cmd.command.comment {
-                    println!("    Comment: {}", comment);
-                }
-                found = true;
-            }
-        }
-
-        if !found {
-            println!("No commands found matching '{}'.", query);
-        }
-        
+    // Search in command history using query and fzf
+    pub fn history_commands(&self, query: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 
-    pub fn get_command(&self, identifier: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let resolved_cmd = self.find_command_by_identifier(identifier)
-            .ok_or("Command not found")?;
-        
-        let _ = preseed(&resolved_cmd.command.command);
+    pub fn obtain_command(&self, identifier: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+       let command = match identifier {
+            Some(id) => self.find_command_by_identifier(&id)
+            .ok_or("Command not found")?
+,
+            None => sebas_fzf_run(self.resolve_all_commands()).context("Faild to run fzf")?,
+        };
+        let _ = preseed(command);
         Ok(())
     }
 
