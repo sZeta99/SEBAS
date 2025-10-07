@@ -1,4 +1,4 @@
-use std::{fs};
+use std::{clone, fs, path::PathBuf};
 
 use crate::{commands::core::definition::CommandGroup, SebasApp};
 
@@ -14,8 +14,7 @@ impl SebasApp {
         Ok(group)
     }
 
-    pub fn save_group(&self, group_name: &str, group: &CommandGroup) -> Result<(), Box<dyn std::error::Error>> {
-        let group_file = self.sebas_dir.join(format!("{}.yaml", group_name));
+    pub fn save_group(&self, group_name: &str, group_file: PathBuf, group: &CommandGroup) -> Result<(), Box<dyn std::error::Error>> {
         let content = serde_yaml::to_string(group)?;
         fs::write(&group_file, content)?;
         Ok(())
@@ -36,9 +35,15 @@ impl SebasApp {
         Ok(groups)
     }
 
-    pub fn add_group(&self, name: &str, yes: bool) -> Result<(), Box<dyn std::error::Error>> {
-        let group_file = self.sebas_dir.join(format!("{}.yaml", name));
+    pub fn add_group(&self, name: &str, path: Option<PathBuf> ,yes: bool) -> Result<(), Box<dyn std::error::Error>> {
         
+        let group_file = if let Some(p) = path {
+            p.join(format!("{}.yaml", name))
+
+        } else {
+            self.sebas_dir.join(format!("{}.yaml", name))
+        };
+               
         if group_file.exists() {
             println!("Group '{}' already exists.", name);
             return Ok(());
@@ -50,7 +55,7 @@ impl SebasApp {
         }
 
         let group = CommandGroup::new();
-        self.save_group(name, &group)?;
+        self.save_group(name, group_file, &group)?;
         println!("Group '{}' created successfully.", name);
         Ok(())
     }

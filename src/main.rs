@@ -28,9 +28,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Init { path } => {
             SebasApp::init_folder(path)?;
         }
-        Commands::Sync => {
-            SebasApp::sync_folders()?;
-        }
+        //Commands::Sync => {
+        //    SebasApp::sync_folders()?;
+        //}
 
         _ => {
             let app = SebasApp::new()?;
@@ -41,7 +41,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Commands::List { group, verbose, plain } => {
                     app.list_commands(group, verbose, plain)?;
-                } Commands::Edit { identifier, new_command, new_group, new_comment, yes } => { app.edit_command(&identifier, new_command, new_group, new_comment, yes)?;
+                }
+                Commands::Edit { identifier, new_command, new_group, new_comment, yes } => {
+                    app.edit_command(&identifier, new_command, new_group, new_comment, yes)?;
                 }
                 Commands::Remove { identifier, yes } => {
                     app.remove_command(&identifier, yes)?;
@@ -55,9 +57,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Commands::Group { action } => {
                     match action {
                         GroupAction::List => app.list_groups()?,
-                        GroupAction::Add { name, yes } => app.add_group(&name, yes)?,
-                        GroupAction::Move { old_name, new_name, yes } => app.rename_group(&old_name, &new_name, yes)?,
-                        GroupAction::Remove { name, yes } => app.remove_group(&name, yes)?,
+                        GroupAction::Add { name,path, yes } => app.add_group(&name,path, yes)?,
+                        //GroupAction::Move { old_name,old_path, new_name, new_path, yes } => app.rename_group(&old_name, &new_name, yes)?,
+                        //GroupAction::Remove { name, path, yes } => app.remove_group(&name,&path, yes)?,
+                         _ => unreachable!()
                     }
                 }
                 _ => unreachable!(),

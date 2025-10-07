@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::Subcommand;
 
 #[derive(Subcommand)]
@@ -10,6 +12,8 @@ pub enum GroupAction {
     Add {
         /// Group name
         name: String,
+        /// Path of the .sebas, current if not specifid
+        path: Option<PathBuf>, 
         /// Skip confirmation prompts
         #[arg(short, long)]
         yes: bool,
@@ -19,8 +23,12 @@ pub enum GroupAction {
     Move {
         /// Old group name
         old_name: String,
+        /// location of group, current if not specifid
+        old_path: Option<PathBuf>,
         /// New group name
         new_name: String,
+        /// location of group, current if not specifid
+        new_path: Option<PathBuf>,
         /// Skip confirmation prompts
         #[arg(short, long)]
         yes: bool,
@@ -30,6 +38,8 @@ pub enum GroupAction {
     Remove {
         /// Group name
         name: String,
+        /// Path of the .sebas, current if not specifid
+        path: Option<PathBuf>,
         /// Skip confirmation prompts
         #[arg(short, long)]
         yes: bool,
