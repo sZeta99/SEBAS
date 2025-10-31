@@ -1,11 +1,9 @@
 pub mod preseedable;
-use sha2::{Digest, Sha256};
 use std::time::{Duration, SystemTime};
 
 /// Represents an individual bookmark with associated metadata
 #[derive(Debug, Clone)]
 pub struct Bookmark {
-    id: String,
     name: String,
     command: String,
     comment: Option<String>,
@@ -26,10 +24,7 @@ impl Bookmark {
             return Err("Name and command cannot be empty.".to_string());
         }
 
-        let id = Bookmark::generate_id(&name, &command);
-
         Ok(Bookmark {
-            id,
             name,
             command,
             comment,
@@ -37,14 +32,6 @@ impl Bookmark {
             created_at: SystemTime::now(),
             last_used: None,
         })
-    }
-
-    /// Generates a unique, deterministic ID for the bookmark using SHA256
-    fn generate_id(name: &str, command: &str) -> String {
-        let mut hasher = Sha256::new();
-        hasher.update(format!("{}{}", name, command));
-        let result = hasher.finalize();
-        result.iter().map(|byte| format!("{:02x}", byte)).collect()
     }
 
     /// Updates the last_used timestamp
@@ -55,8 +42,7 @@ impl Bookmark {
     /// Returns detailed information about the bookmark
     pub fn get_info(&self) -> String {
         format!(
-            "Bookmark Info:\n  ID: {}\n  Name: {}\n  Command: {}\n  Comment: {}\n  Description: {:?}\n  Created At: {:?}\n  Last Used: {:?}",
-            self.id,
+            "Bookmark Info:\n Name: {}\n  Command: {}\n  Comment: {}\n  Description: {:?}\n  Created At: {:?}\n  Last Used: {:?}",
             self.name,
             self.command,
             self.comment.clone().unwrap_or_else(|| "None".to_string()),
@@ -64,11 +50,6 @@ impl Bookmark {
             self.created_at,
             self.last_used
         )
-    }
-
-    /// Returns the unique ID of the bookmark
-    pub fn get_id(&self) -> &String {
-        &self.id
     }
 
     /// Returns the command string
@@ -79,6 +60,11 @@ impl Bookmark {
     /// Returns the comment string, if available
     pub fn get_comment(&self) -> Option<&String> {
         self.comment.as_ref()
+    }
+
+    /// Returns the Name
+    pub fn get_name(&self) -> &String {
+        &self.name
     }
 
     pub fn get_description(&self) -> Option<&String> {
@@ -96,29 +82,6 @@ impl Bookmark {
 mod tests {
     use super::*;
     use std::time::SystemTime;
-
-    #[test]
-    fn test_generate_id() {
-        let name = "Test Name";
-        let command = "echo Hello";
-        let id = Bookmark::generate_id(name, command);
-
-        // Compute the expected hash manually
-        let expected_id = {
-            let mut hasher = Sha256::new();
-            hasher.update(format!("{}{}", name, command));
-            let result = hasher.finalize();
-            result
-                .iter()
-                .map(|byte| format!("{:02x}", byte))
-                .collect::<String>()
-        };
-
-        assert_eq!(
-            id, expected_id,
-            "Generated ID does not match the expected hash"
-        );
-    }
 
     #[test]
     fn test_new_success() {
@@ -143,12 +106,7 @@ mod tests {
         assert_eq!(bookmark.name, name);
         assert_eq!(bookmark.command, command);
         assert_eq!(bookmark.comment, comment);
-        assert_eq!(bookmark.comment, description);
-        assert_eq!(
-            bookmark.id,
-            Bookmark::generate_id(name, command),
-            "Generated ID does not match"
-        );
+        assert_eq!(bookmark.description, description);
         assert!(
             bookmark.last_used.is_none(),
             "Last used should initially be None"
@@ -200,38 +158,4 @@ mod tests {
             );
         }
     }
-
-    #[test]
-    fn test_new_same_id_for_same_inputs() {
-        let name = "Common Name";
-        let command = "echo Common Command";
-
-        let bookmark1 = Bookmark::new(name.to_string(), command.to_string(), None, None).unwrap();
-        let bookmark2 = Bookmark::new(name.to_string(), command.to_string(), None, None).unwrap();
-
-        // Ensure the same inputs result in the same ID
-        assert_eq!(
-            bookmark1.id, bookmark2.id,
-            "Generated IDs should match for identical name and command"
-        );
-    }
-
-    #[test]
-    fn test_new_different_id_for_different_inputs() {
-        let name1 = "Name One";
-        let command1 = "echo Command One";
-
-        let name2 = "Name Two";
-        let command2 = "echo Command Two";
-
-        let bookmark1 = Bookmark::new(name1.to_string(), command1.to_string(), None, None).unwrap();
-        let bookmark2 = Bookmark::new(name2.to_string(), command2.to_string(), None, None).unwrap();
-
-        // Ensure different inputs generate different IDs
-        assert_ne!(
-            bookmark1.id, bookmark2.id,
-            "Generated IDs should not match for different name and command"
-        );
-    }
 }
-

@@ -3,12 +3,15 @@ use std::process::{Command, Stdio};
 
 use crate::bookmark::Bookmark;
 
-/// Trait for pre-seeding and executing commands
-pub trait Preseedable {
+/// Trait for pre-seeding and executing commandsa
+pub trait PreseedStrategy {
     fn preseed(&mut self) -> Result<(), std::io::Error>;
 }
+pub struct BashPreseedStrategy;
 
-impl Preseedable for Bookmark {
+// TODO: have preseed based on system, a strategy patter may be beneficial, this is not a correct
+// strategy implementation, contex shoul be move as to not require Bokkmark method to work
+impl PreseedStrategy for Bookmark {
     /// Preseed logic for handling comments and executing commands
     fn preseed(&mut self) -> Result<(), std::io::Error> {
         // Show additional context if available
@@ -27,7 +30,7 @@ impl Preseedable for Bookmark {
         // Execute the command
         Command::new("bash")
             .arg("-c")
-            .arg(&self.command)
+            .arg(format!("echo '{}' | perl -e 'ioctl STDOUT, 0x5412, $_ for split //, do{{ chomp($_ = <>); $_ }}'", &self.command))
             .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
