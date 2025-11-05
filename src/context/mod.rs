@@ -4,7 +4,7 @@ pub mod format;
 use crate::{context::format::Format, group::Group};
 
 pub struct ContextConfig {
-    pub deafult_group: String,
+    pub deafult_group: PathBuf,
     pub black_list: Vec<String>,
     pub format: Format,
 }
@@ -52,5 +52,13 @@ impl Context {
     /// Returns the path of the config
     pub fn get_config(&self) -> &ContextConfig {
         &self.config
+    }
+
+    pub fn remove_group(&mut self, name: &str) -> Option<Group> {
+        self.groups.remove(name)
+    }
+
+    pub fn get_group_mut(&mut self, name: &str) -> Option<&mut Group> {
+        self.groups.get_mut(name)
     }
 }

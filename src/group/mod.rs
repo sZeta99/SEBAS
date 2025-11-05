@@ -1,11 +1,13 @@
+pub mod crud;
 pub mod error;
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::bookmark::Bookmark;
 use crate::group::error::GroupError;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct Group {
     name: String,
     bookmarks: HashMap<String, Bookmark>,

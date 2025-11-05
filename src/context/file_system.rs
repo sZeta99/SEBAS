@@ -1,48 +1,81 @@
 use std::fs;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::context::Context;
+use serde_yaml;
 
 #[derive(Debug)]
 pub enum FileSystemError {
-    FileNotFound,
+    FileNotFound(String),
+    ContextNotFound(String),
     IoError(io::Error),
-    InvalidDirectory,
-    // Add other error variants as needed
+    SerdeYamlError(serde_yaml::Error),
+    InvalidDirectory(String),
+    InvalidPath(String),
 }
+
+impl From<io::Error> for FileSystemError {
+    fn from(e: io::Error) -> Self {
+        FileSystemError::IoError(e)
+    }
+}
+impl From<serde_yaml::Error> for FileSystemError {
+    fn from(e: serde_yaml::Error) -> Self {
+        FileSystemError::SerdeYamlError(e)
+    }
+}
+
+// TODO: THIS IS a placeholder implementation
 pub trait FileSystem {
-    fn load_bookmarks(&self, directory_path: &PathBuf) -> Result<Vec<String>, FileSystemError>;
+    fn get_sebas_dir(&self) -> Result<PathBuf, FileSystemError>;
+    fn list_contexts(&self) -> Result<Vec<String>, FileSystemError>
+    where
+        Self: Sized;
+    fn ensure_sebas_directory(sebas_dir: &Path) -> Result<(), FileSystemError>;
+    fn cleanup_sebas_directory(base_path: &Path) -> Result<(), FileSystemError>;
 }
 
 impl FileSystem for Context {
-    /// Load bookmarks from a specified directory path.
-    fn load_bookmarks(&self, directory_path: &PathBuf) -> Result<Vec<String>, FileSystemError> {
-        // Check if the path is a valid directory
-        if !directory_path.is_dir() {
-            return Err(FileSystemError::InvalidDirectory);
+    fn get_sebas_dir(&self) -> Result<PathBuf, FileSystemError> {
+        if !self.path.exists() {
+            return Err(FileSystemError::InvalidPath(format!("{:?}", self.path)));
         }
+        Ok(self.path.clone())
+    }
 
-        // Read the directory contents
-        let entries = fs::read_dir(directory_path).map_err(FileSystemError::IoError)?;
-
-        let mut bookmarks = Vec::new();
-
-        for entry in entries {
-            let entry = entry.map_err(FileSystemError::IoError)?;
+    fn list_contexts(&self) -> Result<Vec<String>, FileSystemError> {
+        if !self.path.exists() {
+            return Ok(Vec::new());
+        }
+        let mut contexts = Vec::new();
+        for entry in fs::read_dir(self.path.clone())? {
+            let entry = entry?;
             let path = entry.path();
-
-            // Filter files with the .bookmark extension
-            if path.is_file()
-                && path.extension().and_then(|ext| ext.to_str())
-                    == Some(&self.config.format.to_string())
-            {
-                // Read the file contents and add to the bookmarks list
-                let contents = fs::read_to_string(&path).map_err(FileSystemError::IoError)?;
-                bookmarks.push(contents);
+            if path.is_file() && path.extension().map_or(false, |ext| ext == "yaml") {
+                if let Some(stem) = path.file_stem() {
+                    if let Some(name) = stem.to_str() {
+                        contexts.push(name.to_string());
+                    }
+                }
             }
         }
+        Ok(contexts)
+    }
 
-        Ok(bookmarks)
+    fn ensure_sebas_directory(sebas_dir: &Path) -> Result<(), FileSystemError> {
+        if !sebas_dir.exists() {
+            fs::create_dir_all(sebas_dir)?;
+        }
+        Ok(())
+    }
+
+    fn cleanup_sebas_directory(base_path: &Path) -> Result<(), FileSystemError> {
+        let sebas_dir = base_path.join(".sebas");
+        if sebas_dir.exists() {
+            fs::remove_dir_all(sebas_dir)?;
+        }
+        Ok(())
     }
 }
+

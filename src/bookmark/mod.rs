@@ -1,8 +1,10 @@
 pub mod preseedable;
 use std::time::{Duration, SystemTime};
 
+use serde::{Deserialize, Serialize};
+
 /// Represents an individual bookmark with associated metadata
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Bookmark {
     name: String,
     command: String,
