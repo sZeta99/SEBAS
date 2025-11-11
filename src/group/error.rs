@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, io};
 
 #[derive(Debug, Clone)]
 pub enum GroupError {
@@ -18,5 +18,28 @@ impl fmt::Display for GroupError {
                 write!(f, "Bookmark with ID '{}' already exists in the group.", id)
             }
         }
+    }
+}
+
+// -------- CRUD ERROR ---------
+#[derive(Debug)]
+pub enum CRUDGroupError {
+    FileNotFound(String),
+    ContextNotFound(String),
+    IoError(io::Error),
+    SerdeYamlError(serde_yaml::Error),
+    InvalidDirectory(String),
+    InvalidPath(String),
+}
+
+impl From<io::Error> for CRUDGroupError {
+    fn from(e: io::Error) -> Self {
+        CRUDGroupError::IoError(e)
+    }
+}
+
+impl From<serde_yaml::Error> for CRUDGroupError {
+    fn from(e: serde_yaml::Error) -> Self {
+        CRUDGroupError::SerdeYamlError(e)
     }
 }

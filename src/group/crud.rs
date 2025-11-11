@@ -1,43 +1,21 @@
+use crate::group::error::CRUDGroupError;
 use crate::group::Group;
 use serde_yaml;
 use std::fs;
-use std::io;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug)]
-pub enum CRUDError {
-    FileNotFound(String),
-    ContextNotFound(String),
-    IoError(io::Error),
-    SerdeYamlError(serde_yaml::Error),
-    InvalidDirectory(String),
-    InvalidPath(String),
-}
-
-impl From<io::Error> for CRUDError {
-    fn from(e: io::Error) -> Self {
-        CRUDError::IoError(e)
-    }
-}
-
-impl From<serde_yaml::Error> for CRUDError {
-    fn from(e: serde_yaml::Error) -> Self {
-        CRUDError::SerdeYamlError(e)
-    }
-}
-
 pub trait GroupCRUD: Sized {
-    fn load_group(group_path: &PathBuf) -> Result<Self, CRUDError>;
-    fn create_group(&self, group_path: &PathBuf) -> Result<(), CRUDError>;
-    fn delete_group(group_path: &PathBuf) -> Result<(), CRUDError>;
+    fn load_group(group_path: &PathBuf) -> Result<Self, CRUDGroupError>;
+    fn create_group(&self, group_path: &PathBuf) -> Result<(), CRUDGroupError>;
+    fn delete_group(group_path: &PathBuf) -> Result<(), CRUDGroupError>;
     fn exists(path: &Path) -> Result<bool, String>;
 }
 
 impl GroupCRUD for Group {
-    fn load_group(group_path: &PathBuf) -> Result<Self, CRUDError> {
+    fn load_group(group_path: &PathBuf) -> Result<Self, CRUDGroupError> {
         // Require the file to exist
         if !group_path.exists() {
-            return Err(CRUDError::FileNotFound(
+            return Err(CRUDGroupError::FileNotFound(
                 group_path.to_str().unwrap_or("InvalidPath").to_string(),
             ));
         }
@@ -46,34 +24,34 @@ impl GroupCRUD for Group {
         Ok(group)
     }
 
-    fn create_group(&self, group_path: &PathBuf) -> Result<(), CRUDError> {
+    fn create_group(&self, group_path: &PathBuf) -> Result<(), CRUDGroupError> {
         // Require the parent folder to exist, do NOT create it
         if let Some(parent) = group_path.parent() {
             if !parent.exists() {
-                return Err(CRUDError::InvalidDirectory(
+                return Err(CRUDGroupError::InvalidDirectory(
                     parent.to_str().unwrap_or("InvalidDirectory").to_string(),
                 ));
             }
         } else {
-            return Err(CRUDError::InvalidPath(
+            return Err(CRUDGroupError::InvalidPath(
                 group_path.to_str().unwrap_or("InvalidPath").to_string(),
             ));
         }
 
         // It is allowed to overwrite any file in an existing directory (matches 'create' semantics)
-        let yaml_content = serde_yaml::to_string(self).map_err(CRUDError::SerdeYamlError)?;
-        std::fs::write(group_path, yaml_content).map_err(CRUDError::IoError)?;
+        let yaml_content = serde_yaml::to_string(self).map_err(CRUDGroupError::SerdeYamlError)?;
+        std::fs::write(group_path, yaml_content).map_err(CRUDGroupError::IoError)?;
         Ok(())
     }
 
-    fn delete_group(group_path: &PathBuf) -> Result<(), CRUDError> {
+    fn delete_group(group_path: &PathBuf) -> Result<(), CRUDGroupError> {
         // Require the file to exist
         if !group_path.exists() {
-            return Err(CRUDError::FileNotFound(
+            return Err(CRUDGroupError::FileNotFound(
                 group_path.to_str().unwrap_or("InvalidPath").to_string(),
             ));
         }
-        fs::remove_file(group_path).map_err(CRUDError::IoError)?;
+        fs::remove_file(group_path).map_err(CRUDGroupError::IoError)?;
         Ok(())
     }
 
@@ -99,7 +77,7 @@ mod tests {
 
     use super::*;
     #[test]
-    fn test_load_group() -> Result<(), CRUDError> {
+    fn test_load_group() -> Result<(), CRUDGroupError> {
         let dir = tempdir()?; // Create a temporary directory
         let file_path = dir.path().join("group.yaml");
 
@@ -114,13 +92,13 @@ mod tests {
         // Test loading with a non-existent file
         let non_existent_path = dir.path().join("non_existent.yaml");
         let result = Group::load_group(&non_existent_path);
-        assert!(matches!(result, Err(CRUDError::FileNotFound(_))));
+        assert!(matches!(result, Err(CRUDGroupError::FileNotFound(_))));
 
         Ok(())
     }
 
     #[test]
-    fn test_create_group() -> Result<(), CRUDError> {
+    fn test_create_group() -> Result<(), CRUDGroupError> {
         let dir = tempdir()?; // Create a temporary directory
         let file_path = dir.path().join("group.yaml");
 
@@ -134,13 +112,13 @@ mod tests {
         // Test creating in a non-existent directory
         let invalid_path = dir.path().join("nonexistent_dir/group.yaml");
         let result = group.create_group(&invalid_path);
-        assert!(matches!(result, Err(CRUDError::InvalidDirectory(_))));
+        assert!(matches!(result, Err(CRUDGroupError::InvalidDirectory(_))));
 
         Ok(())
     }
 
     #[test]
-    fn test_delete_group() -> Result<(), CRUDError> {
+    fn test_delete_group() -> Result<(), CRUDGroupError> {
         let dir = tempdir()?; // Create a temporary directory
         let file_path = dir.path().join("group.yaml");
 
@@ -154,13 +132,13 @@ mod tests {
 
         // Test deleting a non-existent file
         let result = Group::delete_group(&file_path);
-        assert!(matches!(result, Err(CRUDError::FileNotFound(_))));
+        assert!(matches!(result, Err(CRUDGroupError::FileNotFound(_))));
 
         Ok(())
     }
 
     #[test]
-    fn test_modify_group() -> Result<(), CRUDError> {
+    fn test_modify_group() -> Result<(), CRUDGroupError> {
         let dir = tempdir()?; // Create a temporary directory
         let file_path = dir.path().join("group.yaml");
 
@@ -179,4 +157,3 @@ mod tests {
         Ok(())
     }
 }
-
