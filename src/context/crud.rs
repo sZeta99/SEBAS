@@ -1,5 +1,4 @@
 use std::fs;
-use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::context::error::CRUDContextError;
@@ -35,7 +34,7 @@ impl FileSystem for Context {
                 if let Some(stem) = path.file_stem() {
                     if let Some(name) = stem.to_str() {
                         contexts.push(name.to_string());
-                    :}
+                    }
                 }
             }
         }

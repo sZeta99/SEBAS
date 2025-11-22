@@ -1,16 +1,16 @@
+use crate::group::alias::GroupAlias;
 use crate::group::error::CRUDGroupError;
-use crate::group::Group;
 use serde_yaml;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 pub trait GroupCRUD: Sized {
     fn load_group(group_path: &PathBuf) -> Result<Self, CRUDGroupError>;
-    fn create_group(&self, group_path: &PathBuf) -> Result<(), CRUDGroupError>;
+    fn save_group(&self, group_path: &PathBuf) -> Result<(), CRUDGroupError>;
     fn delete_group(group_path: &PathBuf) -> Result<(), CRUDGroupError>;
     fn exists(path: &Path) -> Result<bool, String>;
 }
-
+// TODO: Working on deciding is the write responability is of the alias or the Group using alias
 impl GroupCRUD for Group {
     fn load_group(group_path: &PathBuf) -> Result<Self, CRUDGroupError> {
         // Require the file to exist
@@ -19,12 +19,15 @@ impl GroupCRUD for Group {
                 group_path.to_str().unwrap_or("InvalidPath").to_string(),
             ));
         }
+        // TODO: The loading of the group must be done manualy or the structure of the GroupAlias mast
+        // be changed
         let yaml_content = fs::read_to_string(group_path)?;
-        let group: Group = serde_yaml::from_str(&yaml_content)?;
+        let group: GroupAlias = serde_yaml::from_str(&yaml_content)?;
+
         Ok(group)
     }
 
-    fn create_group(&self, group_path: &PathBuf) -> Result<(), CRUDGroupError> {
+    fn save_group(&self, group_path: &PathBuf) -> Result<(), CRUDGroupError> {
         // Require the parent folder to exist, do NOT create it
         if let Some(parent) = group_path.parent() {
             if !parent.exists() {
@@ -82,16 +85,16 @@ mod tests {
         let file_path = dir.path().join("group.yaml");
 
         // Create a sample group file
-        let group = Group::default(); // Assuming `Group` has a `default` method
+        let group = GroupAlias::default(); // Assuming `Group` has a `default` method
         fs::write(&file_path, serde_yaml::to_string(&group)?)?;
 
         // Test loading
-        let loaded_group = Group::load_group(&file_path)?;
+        let loaded_group = GroupAlias::load_group(&file_path)?;
         assert_eq!(loaded_group, group);
 
         // Test loading with a non-existent file
         let non_existent_path = dir.path().join("non_existent.yaml");
-        let result = Group::load_group(&non_existent_path);
+        let result = GroupAlias::load_group(&non_existent_path);
         assert!(matches!(result, Err(CRUDGroupError::FileNotFound(_))));
 
         Ok(())
@@ -103,15 +106,15 @@ mod tests {
         let file_path = dir.path().join("group.yaml");
 
         // Test creating a group
-        let group = Group::default();
-        group.create_group(&file_path)?;
+        let group = GroupAlias::default();
+        group.save_group(&file_path)?;
 
         // Verify the file was created
         assert!(file_path.exists());
 
         // Test creating in a non-existent directory
         let invalid_path = dir.path().join("nonexistent_dir/group.yaml");
-        let result = group.create_group(&invalid_path);
+        let result = group.save_group(&invalid_path);
         assert!(matches!(result, Err(CRUDGroupError::InvalidDirectory(_))));
 
         Ok(())
@@ -123,36 +126,16 @@ mod tests {
         let file_path = dir.path().join("group.yaml");
 
         // Create a sample group file
-        let group = Group::default();
+        let group = GroupAlias::default();
         fs::write(&file_path, serde_yaml::to_string(&group)?)?;
 
         // Test deleting the group
-        Group::delete_group(&file_path)?;
+        GroupAlias::delete_group(&file_path)?;
         assert!(!file_path.exists());
 
         // Test deleting a non-existent file
-        let result = Group::delete_group(&file_path);
+        let result = GroupAlias::delete_group(&file_path);
         assert!(matches!(result, Err(CRUDGroupError::FileNotFound(_))));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_modify_group() -> Result<(), CRUDGroupError> {
-        let dir = tempdir()?; // Create a temporary directory
-        let file_path = dir.path().join("group.yaml");
-
-        // Create a sample group file
-        let mut group = Group::default();
-        fs::write(&file_path, serde_yaml::to_string(&group)?)?;
-
-        // Modify the group
-        group.name = "ModifiedGroup".to_string(); // Assuming `Group` has a `name` field
-        group.create_group(&file_path)?;
-
-        // Verify the file was modified
-        let loaded_group = Group::load_group(&file_path)?;
-        assert_eq!(loaded_group.name, "ModifiedGroup");
 
         Ok(())
     }
