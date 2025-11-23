@@ -1,5 +1,7 @@
 use std::{fmt, io};
 
+// -------- GROUP ERROR ---------
+// TODO: IMPLEMENT thiserror and anyhow
 #[derive(Debug, Clone)]
 pub enum GroupError {
     EmptyName,
@@ -21,25 +23,57 @@ impl fmt::Display for GroupError {
     }
 }
 
+// Implement ToString for GroupError using Display
+impl std::string::ToString for GroupError {
+    fn to_string(&self) -> String {
+        self.to_string() // Calls the Display implementation
+    }
+}
+
 // -------- CRUD ERROR ---------
+
 #[derive(Debug)]
 pub enum CRUDGroupError {
     FileNotFound(String),
     ContextNotFound(String),
-    IoError(io::Error),
-    SerdeYamlError(serde_yaml::Error),
+    IoError(String),
+    SerdeYamlError(String),
     InvalidDirectory(String),
     InvalidPath(String),
+    AliasFaild(String),
 }
 
-impl From<io::Error> for CRUDGroupError {
-    fn from(e: io::Error) -> Self {
-        CRUDGroupError::IoError(e)
+impl fmt::Display for CRUDGroupError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CRUDGroupError::FileNotFound(filename) => {
+                write!(f, "File '{}' not found.", filename)
+            }
+            CRUDGroupError::ContextNotFound(context) => {
+                write!(f, "Context '{}' not found.", context)
+            }
+            CRUDGroupError::IoError(err) => {
+                write!(f, "I/O error: {}", err)
+            }
+            CRUDGroupError::SerdeYamlError(err) => {
+                write!(f, "YAML error: {}", err)
+            }
+            CRUDGroupError::InvalidDirectory(dir) => {
+                write!(f, "Invalid directory: '{}'", dir)
+            }
+            CRUDGroupError::InvalidPath(path) => {
+                write!(f, "Invalid path: '{}'", path)
+            }
+            CRUDGroupError::AliasFaild(alias) => {
+                write!(f, "Alias creation failed for '{}'.", alias)
+            }
+        }
     }
 }
 
-impl From<serde_yaml::Error> for CRUDGroupError {
-    fn from(e: serde_yaml::Error) -> Self {
-        CRUDGroupError::SerdeYamlError(e)
+// Implement ToString for CRUDGroupError using Display
+impl std::string::ToString for CRUDGroupError {
+    fn to_string(&self) -> String {
+        self.to_string() // Calls the Display implementation
     }
 }

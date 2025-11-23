@@ -45,17 +45,6 @@ impl Group {
             modified_at: now,          // Set the modification time
         })
     }
-    pub fn to_alias(&self) -> GroupAlias {
-        GroupAlias {
-            bookmarks: self
-                .get_bookmarks()
-                .values()
-                .map(|v: &Bookmark| v.clone())
-                .collect(),
-            created_at: self.get_created_time().clone(),
-            modified_at: self.get_modified_time().clone(),
-        }
-    }
 
     /// Adds a `Bookmark` to the group.
     /// Returns an error if the bookmark already exists.
@@ -162,4 +151,3 @@ mod tests {
         );
     }
 }
-

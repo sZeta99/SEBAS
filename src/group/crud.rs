@@ -1,5 +1,6 @@
 use crate::group::alias::GroupAlias;
 use crate::group::error::CRUDGroupError;
+use crate::group::Group;
 use serde_yaml;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -42,8 +43,10 @@ impl GroupCRUD for Group {
         }
 
         // It is allowed to overwrite any file in an existing directory (matches 'create' semantics)
-        let yaml_content = serde_yaml::to_string(self).map_err(CRUDGroupError::SerdeYamlError)?;
-        std::fs::write(group_path, yaml_content).map_err(CRUDGroupError::IoError)?;
+        let yaml_content = serde_yaml::to_string(self)
+            .map_err(|e| CRUDGroupError::SerdeYamlError(e.to_string()))?;
+        std::fs::write(group_path, yaml_content)
+            .map_err(|e| CRUDGroupError::IoError(e.to_string()))?;
         Ok(())
     }
 
@@ -54,7 +57,7 @@ impl GroupCRUD for Group {
                 group_path.to_str().unwrap_or("InvalidPath").to_string(),
             ));
         }
-        fs::remove_file(group_path).map_err(CRUDGroupError::IoError)?;
+        fs::remove_file(group_path).map_err(|e| CRUDGroupError::IoError(e.to_string()))?;
         Ok(())
     }
 
