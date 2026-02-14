@@ -13,7 +13,7 @@ pub enum GroupAction {
         /// Group name
         name: String,
         /// Path of the .sebas, current if not specifid
-        path: Option<PathBuf>, 
+        path: Option<PathBuf>,
         /// Skip confirmation prompts
         #[arg(short, long)]
         yes: bool,

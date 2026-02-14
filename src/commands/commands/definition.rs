@@ -86,7 +86,4 @@ pub enum Commands {
     },
     /// Sync commands from nested .sebas folders
     Sync,
-
 }
-
-

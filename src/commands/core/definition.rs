@@ -12,7 +12,7 @@ pub struct ResolvedCommand {
     Debug, Clone)]
 pub struct SavedCommand {
     pub(crate) command: String,
-    pub(crate)comment: Option<String>,
+    pub(crate) comment: Option<String>,
     pub(crate) hash: String,
     pub(crate) created_at: String,
 }

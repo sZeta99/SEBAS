@@ -1,7 +1,15 @@
-use std::{fs, io::{self, Read, Write}};
-use std::process::Command as ProcessCommand;
+use crate::{
+    commands::core::definition::{CommandGroup, ResolvedCommand},
+    utils::dir::{get_all_reachable_sebas_dir, get_first_reachable_sebas_dir},
+    Config, SebasApp, State,
+};
 use sha2::{Digest, Sha256};
-use crate::{commands::core::definition::{CommandGroup, ResolvedCommand}, utils::dir::{find_sebas_dir, get_all_sebas_dirs}, SebasApp};
+use std::process::Command as ProcessCommand;
+use std::{
+    fs,
+    io::{self, Read, Write},
+    path::PathBuf,
+};
 impl CommandGroup {
     pub fn new() -> Self {
         Self {
@@ -11,10 +19,18 @@ impl CommandGroup {
 }
 
 impl SebasApp {
-    pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let sebas_dir = find_sebas_dir()
+    pub fn new(current_dir: PathBuf) -> Result<Self, Box<dyn std::error::Error>> {
+        let first_reachable_sebas_dir = get_first_reachable_sebas_dir(&current_dir)
             .ok_or("No .sebas folder found. Run 'sebas init' to create one.")?;
-        Ok(Self { sebas_dir })
+        let all_reachable_sebas_dir = get_all_reachable_sebas_dir(&current_dir);
+        Ok(Self {
+            state: State {
+                current_dir,
+                first_reachable_sebas_dir,
+                all_reachable_sebas_dir,
+            },
+            config: Config {},
+        })
     }
 
     pub fn generate_hash(command: &str) -> String {
@@ -28,7 +44,7 @@ impl SebasApp {
         if atty::is(atty::Stream::Stdin) {
             return None;
         }
-        
+
         let mut input = String::new();
         if io::stdin().read_to_string(&mut input).is_ok() {
             let trimmed = input.trim();
@@ -45,7 +61,7 @@ impl SebasApp {
             .arg("fc -ln -1")
             .output()
             .ok()?;
-        
+
         let command = String::from_utf8_lossy(&output.stdout).trim().to_string();
         if command.is_empty() || command.starts_with("sebas") {
             None
@@ -64,8 +80,8 @@ impl SebasApp {
 
     pub fn resolve_all_commands(&self) -> Vec<ResolvedCommand> {
         let mut resolved = Vec::new();
-        let dirs = get_all_sebas_dirs();
-        
+        let dirs = get_all_sebas_dirs(self.state.current_dir);
+
         for dir in dirs {
             if let Ok(entries) = fs::read_dir(&dir) {
                 for entry in entries {
@@ -74,7 +90,9 @@ impl SebasApp {
                         if path.extension().and_then(|s| s.to_str()) == Some("yaml") {
                             if let Some(group_name) = path.file_stem().and_then(|s| s.to_str()) {
                                 if let Ok(content) = fs::read_to_string(&path) {
-                                    if let Ok(group) = serde_yaml::from_str::<CommandGroup>(&content) {
+                                    if let Ok(group) =
+                                        serde_yaml::from_str::<CommandGroup>(&content)
+                                    {
                                         for (cmd_idx, cmd) in group.commands.iter().enumerate() {
                                             resolved.push(ResolvedCommand {
                                                 command: cmd.clone(),
@@ -91,25 +109,21 @@ impl SebasApp {
                 }
             }
         }
-        
+
         resolved
     }
 
     pub fn find_command_by_identifier(&self, identifier: &str) -> Option<ResolvedCommand> {
         let resolved = self.resolve_all_commands();
-        
+
         // Try to parse as index
         if let Ok(index) = identifier.parse::<usize>() {
-            return  resolved.get(index - 1).cloned();
+            return resolved.get(index - 1).cloned();
         }
-        
+
         // Try to find by hash
-        resolved.into_iter().find(|cmd| cmd.command.hash.starts_with(identifier))
+        resolved
+            .into_iter()
+            .find(|cmd| cmd.command.hash.starts_with(identifier))
     }
 }
-
-
-
-
-
-

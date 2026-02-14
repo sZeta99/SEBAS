@@ -1,11 +1,9 @@
-mod utils;
 mod commands;
-use clap::{Parser};
-use std::
-    path::PathBuf
-;
+mod utils;
+use clap::Parser;
+use std::{collections::HashMap, env, path::PathBuf};
 
-use crate::{commands::{commands::definition::Commands, group::definition::GroupAction}};
+use crate::commands::{commands::definition::Commands, group::definition::GroupAction};
 
 #[derive(Parser)]
 #[command(name = "sebas")]
@@ -17,50 +15,72 @@ struct Cli {
 }
 
 struct SebasApp {
-    sebas_dir: PathBuf,
+    state: State,
+    config: Config,
 }
-
+/// Global config for consistency option on multiple run
+pub struct Config {}
+/// State of the currect application run
+struct State {
+    current_dir: PathBuf,
+    first_reachable_sebas_dir: PathBuf,
+    all_reachable_sebas_dir: Vec<PathBuf>,
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     match cli.command {
         Commands::Init { path } => {
-            SebasApp::init_folder(path)?;
+            SebasApp::init_folder(path, env::current_dir().unwrap(), ".sebas".to_owned())?;
         }
         //Commands::Sync => {
         //    SebasApp::sync_folders()?;
         //}
-
         _ => {
-            let app = SebasApp::new()?;
-            
+            let app = SebasApp::new(env::current_dir().unwrap())?;
+
             match cli.command {
-                Commands::Add { command, group, comment, yes } => {
+                Commands::Add {
+                    command,
+                    group,
+                    comment,
+                    yes,
+                } => {
                     app.add_command(command, group, comment, yes)?;
                 }
-                Commands::List { group, verbose, plain } => {
-                    app.list_commands(group, verbose, plain)?;
+                Commands::List {
+                    group,
+                    verbose,
+                    plain,
+                } => {
+                    // app.list_commands(group, verbose, plain)?;
                 }
-                Commands::Edit { identifier, new_command, new_group, new_comment, yes } => {
-                    app.edit_command(&identifier, new_command, new_group, new_comment, yes)?;
+                Commands::Edit {
+                    identifier,
+                    new_command,
+                    new_group,
+                    new_comment,
+                    yes,
+                } => {
+                    //  app.edit_command(&identifier, new_command, new_group, new_comment, yes)?;
                 }
                 Commands::Remove { identifier, yes } => {
-                    app.remove_command(&identifier, yes)?;
+                    //  app.remove_command(&identifier, yes)?;
                 }
                 Commands::History { query } => {
-                    app.history_commands(query)?;
+                    //  app.history_commands(query)?;
                 }
                 Commands::Obtain { identifier } => {
-                    app.obtain_command(identifier)?;
+                    //   app.obtain_command(identifier)?;
                 }
                 Commands::Group { action } => {
                     match action {
-                        GroupAction::List => app.list_groups()?,
-                        GroupAction::Add { name,path, yes } => app.add_group(&name,path, yes)?,
+                        //   GroupAction::List => app.list_groups()?,
+                        //  GroupAction::Add { name, path, yes } => app.add_group(&name, path, yes)?,
                         //GroupAction::Move { old_name,old_path, new_name, new_path, yes } => app.rename_group(&old_name, &new_name, yes)?,
                         //GroupAction::Remove { name, path, yes } => app.remove_group(&name,&path, yes)?,
-                         _ => unreachable!()
+                        _ => unreachable!(),
                     }
                 }
                 _ => unreachable!(),
